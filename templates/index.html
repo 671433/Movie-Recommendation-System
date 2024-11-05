@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommendation System</title>
+    <link rel="stylesheet" href="static/styles2.css">
+</head>
+<body>
+    <header>
+        <h1>Movie Recommendation System</h1>
+    </header>
+
+    <main>
+        <form class="search-form" method="POST">
+            <label for="movieSearch">Enter movie name:</label>
+            <input type="text" id="movieSearch" name="movie_name" placeholder="Search for a movie...">
+            <button type="submit">Get recommendations</button>
+        </form>
+
+        <div class="reviews-intro">
+        <h3>Discover Your Next Favorite Movie:</h3>
+        <p class="reviews-description">
+            Welcome to my movie recommendation platform! Just enter a movie title to see similar films,
+            complete with details like summaries, release dates, and ratings pulled from a trusted API.
+            My platform also analyzes reviews to predict sentiment, making it easy to gauge each film's reception.
+            Find reliable recommendations and insights to make your movie selection easier.
+        </p>
+    </div>
+
+
+        {% if movie_details %}
+        <div class="movie-container">
+            <div class="movie-poster">
+                <img src="https://image.tmdb.org/t/p/w500{{ movie_details['poster_path'] }}"
+                     alt="{{ movie_details['title'] }}"
+                     loading="lazy">
+            </div>
+            <div class="movie-details">
+                <h2>{{ movie_details['title'] }}</h2>
+                <p><strong>Overview:</strong> {{ movie_details['overview'] }}</p>
+                <p><strong>Release Date:</strong> {{ movie_details['release_date'] }}</p>
+                <p><strong>Rating:</strong> {{ movie_details['vote_average'] }}/10</p>
+                <p><strong>Vote Count:</strong> {{ movie_details['vote_count'] }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if reviews %}
+<section class="reviews-section">
+    <div class="reviews-intro">
+        <h3>Reviews Analysis</h3>
+        <p class="reviews-description">
+            I have analyzed user reviews using sentiment prediction model first, but it was not good with short texts.
+            Now using Support vector machines model, it is good for both short and long texts.
+            The model is to help you understand viewers' reactions.
+            Each review has been classified as either positive or negative based on the review content.
+        </p>
+    </div>
+
+    <div class="reviews-container">
+        {% for review in reviews %}
+        <div class="review-card {% if review['sentiment'] == 'POSITIVE' %}positive{% else %}negative{% endif %}">
+            <div class="review-header">
+                <h4>{{ review['author'] }}</h4>
+                <span class="sentiment-badge {% if review['sentiment'] == 'POSITIVE' %}positive{% else %}negative{% endif %}">
+                    {% if review['sentiment'] == 'POSITIVE' %}
+                        <svg class="sentiment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                            <line x1="9" y1="9" x2="9.01" y2="9"/>
+                            <line x1="15" y1="9" x2="15.01" y2="9"/>
+                        </svg>
+                        Positive Review
+                    {% else %}
+                        <svg class="sentiment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M16 16s-1.5-2-4-2-4 2-4 2"/>
+                            <line x1="9" y1="9" x2="9.01" y2="9"/>
+                            <line x1="15" y1="9" x2="15.01" y2="9"/>
+                        </svg>
+                        Negative Review
+                    {% endif %}
+                </span>
+            <!-- This was for nb model
+                <span class="confidence-badge">Confidence: {{ review['confidence'] }}</span>
+                 -->
+
+            </div>
+            <div class="review-content">
+                <p>{{ review['content'] }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+        {% if error_message %}
+        <div class="error-message">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
+        {% if recommendations is not none %}
+    {% if recommendations|length == 0 %}
+    <p class="no-results">No recommendations available.</p>
+    {% else %}
+    <section class="recommendations-section">
+
+        <div class="reviews-intro">
+        <h3>Recommended Movies:</h3>
+        <p class="reviews-description">
+            This recommendation system suggests movies based on similarity in genres, cast, director, and descriptions.
+            Using TF-IDF to analyze key terms across these features, I transform the text data into numerical vectors.
+            Cosine similarity then measures how closely each movie aligns with the selected title, ranking movies by relevance.
+            Working with a sample of 10,000 movies, the system efficiently recommends the top five similar titles based on content similarity.
+        </p>
+    </div>
+        <div class="recommendations-grid">
+            {% for recommendation in recommendations %}
+            <div class="recommendation-card">
+                <img src="https://image.tmdb.org/t/p/w500{{ recommendation.poster_path }}" alt="{{ recommendation.title }}" loading="lazy">
+                <div class="movie-info">
+                    <h4>{{ recommendation.title }}</h4>
+                    <p><strong>Release Date:</strong> {{ recommendation.release_date }}</p>
+                    <p><strong>Rating:</strong> {{ recommendation.vote_average }}/10</p>
+                    <p><strong>Vote Count:</strong> {{ recommendation.vote_count }}</p>
+                    <p>{{ recommendation.overview }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+{% endif %}
+
+
+
+    </main>
+
+    <footer>
+        <p>Powered By Tamer Al Deen _ DAT152 _ ML03</p>
+    </footer>
+</body>
+</html>

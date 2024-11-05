@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommendation System</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <script>
+        function fetchSuggestions() {
+            const input = document.getElementById('movie_name').value;
+            if (input.length > 0) {
+                fetch(`/suggest_movies?query=${input}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const suggestions = document.getElementById('suggestions');
+                        suggestions.innerHTML = '';
+                        data.forEach(movie => {
+                            const li = document.createElement('li');
+                            li.textContent = movie;
+                            li.onclick = () => {
+                                document.getElementById('movie_name').value = movie;
+                                suggestions.innerHTML = '';
+                            };
+                            suggestions.appendChild(li);
+                        });
+                    });
+            } else {
+                document.getElementById('suggestions').innerHTML = '';
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Movie Recommendation System</h1>
+    <form method="POST">
+        <label for="movie_name">Enter movie name:</label>
+        <input type="text" name="movie_name" id="movie_name" oninput="fetchSuggestions()" placeholder="e.g., Star Wars">
+        <button type="submit">Get recommendations</button>
+    </form>
+    <ul id="suggestions" style="list-style: none; padding: 0;"></ul>
+
+{% if movie_details %}
+    <div class="movie-details">
+        <h2>{{ movie_details['title'] }}</h2>
+        <img src="https://image.tmdb.org/t/p/w500{{ movie_details['poster_path'] }}" alt="{{ movie_details['title'] }}">
+        <p><strong>Overview:</strong> {{ movie_details['overview'] }}</p>
+        <p><strong>Release Date:</strong> {{ movie_details['release_date'] }}</p>
+        <p><strong>Rating:</strong> {{ movie_details['vote_average'] }}</p>
+    </div>
+{% endif %}
+
+{% if reviews %}
+    <h3>Reviews</h3>
+    <table class="reviews-table">
+        <tr>
+            <th>Reviewer</th>
+            <th>Review</th>
+            <th>Status</th>
+
+        </tr>
+        {% for review in reviews %}
+            <tr>
+                <td>{{ review['author'] }}</td>
+                <td>{{ review['content'] }}</td>
+                 <td>Undetermined</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+
+    {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+    {% endif %}
+
+    {% if recommendations is not none %}
+        {% if recommendations|length == 0 %}
+            <p>No recommendations available.</p>
+        {% else %}
+            <h3>Recommended Movies:</h3>
+            <ul>
+                {% for recommendation in recommendations %}
+                    <li>{{ recommendation }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endif %}
+</body>
+<footer>Powered By Tamer Al Deen _ DAT152 _ ML03</footer>
+</html>
