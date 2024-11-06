@@ -1,3 +1,6 @@
+import gc
+import os
+
 from flask import Flask, request, render_template, jsonify
 import pandas as pd
 import numpy as np
@@ -12,21 +15,66 @@ app = Flask(__name__)
 API_KEY = '3acc39754e9014eca3c0799f663b5785'
 BASE_URL = 'https://api.themoviedb.org/3'
 
-# Load the data
-df = pd.read_csv('new_movies.csv', low_memory=False, encoding='utf-8', nrows=10000)
+# Global variables
+df = None
+cosine_sim = None
+nb_sentiment_model = None
+svm_sentiment_model = None
+vectorizer = None
+vectorizer_svm = None
 
-# Set up the TF-IDF
-tfidf = TfidfVectorizer(analyzer='word', stop_words='english')
-tfidf_matrix = tfidf.fit_transform(df['concat'])
-cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
 
-# Load the sentiment analysis model and vectorizer
-nb_sentiment_model = pickle.load(open('nb_sentiment_model.pkl', 'rb'))
-vectorizer = pickle.load(open('review_vectorizer.pkl', 'rb'))
+@app.before_first_request
+def load_data():
+    global df, cosine_sim, nb_sentiment_model, svm_sentiment_model, vectorizer, vectorizer_svm
 
-#Load the support vector machines model and vectorizer
-svm_sentiment_model = pickle.load(open('svm_sentiment_model.pkl', 'rb'))
-vectorizer_svm = pickle.load(open('review_vectorizer_SVM.pkl', 'rb'))
+    # Optimize DataFrame loading
+    dtype_dict = {
+        'id': 'int32',
+        'title': 'str',
+        'concat': 'str',
+        # Add other columns with appropriate data types
+    }
+
+    # Load CSV with optimized settings
+    df = pd.read_csv('new_movies.csv',
+                     low_memory=False,
+                     encoding='utf-8',
+                     nrows=10000,
+                     dtype=dtype_dict,
+                     usecols=['id', 'title', 'concat'])  # Only load needed columns
+
+    # Optimize TF-IDF
+    tfidf = TfidfVectorizer(analyzer='word',
+                            stop_words='english',
+                            max_features=5000)  # Limit features
+    tfidf_matrix = tfidf.fit_transform(df['concat'])
+
+    # Calculate similarity matrix in chunks to save memory
+    chunk_size = 1000
+    n_chunks = len(df) // chunk_size + 1
+    cosine_sim = np.zeros((len(df), len(df)), dtype='float32')  # Use float32 instead of float64
+
+    for i in range(n_chunks):
+        start = i * chunk_size
+        end = min((i + 1) * chunk_size, len(df))
+        chunk = tfidf_matrix[start:end]
+        cosine_sim[start:end] = cosine_similarity(chunk, tfidf_matrix)
+
+    # Load models more efficiently
+    with open('nb_sentiment_model.pkl', 'rb') as f:
+        nb_sentiment_model = pickle.load(f)
+    with open('review_vectorizer.pkl', 'rb') as f:
+        vectorizer = pickle.load(f)
+    with open('svm_sentiment_model.pkl', 'rb') as f:
+        svm_sentiment_model = pickle.load(f)
+    with open('review_vectorizer_SVM.pkl', 'rb') as f:
+        vectorizer_svm = pickle.load(f)
+
+    # Clear unnecessary objects
+    gc.collect()
+
+
 
 
 # Analyze the sentiment of a single review by the sentiment analysis model
