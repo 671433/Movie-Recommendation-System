@@ -29,11 +29,17 @@ def load_data():
     global df, cosine_sim, nb_sentiment_model, svm_sentiment_model, vectorizer, vectorizer_svm, data_loaded
 
     if not data_loaded:
-        # URL of the file in Google Drive
-        file_url = 'https://drive.google.com/uc?id=18gEjCisVUR5GuFCgyuCR_FFG2LBJDbvR&export=download'
+        # URL of the file in Google Drive (for the dataset)
+        file_url_movies = 'https://drive.google.com/uc?id=18gEjCisVUR5GuFCgyuCR_FFG2LBJDbvR&export=download'
 
-        # Use gdown to download the file
-        gdown.download(file_url, 'new_movies.csv', quiet=False)
+        # URL of the file for the svm_sentiment_model.pkl
+        file_url_svm_model = 'https://drive.google.com/uc?id=1j7O1sc9k1Law5vYRLZzjTxQL3VrNpEVZ&export=download'
+
+        # Use gdown to download the movies dataset
+        gdown.download(file_url_movies, 'new_movies.csv', quiet=False)
+
+        # Download the svm sentiment model
+        gdown.download(file_url_svm_model, 'svm_sentiment_model.pkl', quiet=False)
 
         # Load the DataFrame
         dtype_dict = {
@@ -92,12 +98,11 @@ def load_data():
         with open('review_vectorizer_SVM.pkl', 'rb') as f:
             vectorizer_svm = pickle.load(f)
 
-        # Clear unpip install gdownnecessary objects to free memory
+        # Clear unnecessary objects to free memory
         gc.collect()
 
         # Set the flag to True to indicate data has been loaded
         data_loaded = True
-
 
 
 # Analyze the sentiment of a single review by the sentiment analysis model
@@ -112,7 +117,7 @@ def analyze_review_sentiment(review_text):
         print(f"Error analyzing sentiment: {e}")
         return 'UNKNOWN'
 
- #Analyze the sentiment of a single review by support vector machines model
+# Analyze the sentiment of a single review by support vector machines model
 def analyze_review_sentiment_by_svm(review_text):
     try:
         # Transform the review text using the vectorizer
@@ -154,10 +159,8 @@ def get_recommendations(title):
                 "release_date": movie_details.get('release_date', ''),
                 "vote_average": rounded_vote_average,
                 "vote_count": movie_details.get('vote_count', ''),
-
             })
     return recommended_movies
-
 
 
 def get_movie_details(movie_name):
@@ -176,7 +179,7 @@ def get_movie_details(movie_name):
 
 
 def get_movie_reviews(movie_id):
-    #Get movie reviews and analyze their sentiment
+    # Get movie reviews and analyze their sentiment
     url = f"{BASE_URL}/movie/{movie_id}/reviews?api_key={API_KEY}"
     print(f"Fetching Reviews URL: {url}")
     response = requests.get(url)
@@ -185,13 +188,16 @@ def get_movie_reviews(movie_id):
         data = response.json()
         reviews = data.get('results', [])
 
+        # Check if there are reviews
+        if not reviews:
+            return []
+
         # Analyze sentiment for each review
         for review in reviews:
             # Extract the review content
             review_text = review.get('content', '')
             # Add sentiment analysis to each review
             review['sentiment'] = analyze_review_sentiment_by_svm(review_text)
-            print( review['sentiment'])
 
             # Confidence score
             review['confidence'] = 0.8 if len(review_text) > 100 else 0.5
@@ -206,44 +212,12 @@ def get_movie_reviews(movie_id):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     recommendations = []
-    error_message = None
-    movie_details = None
-    reviews = []
-
     if request.method == 'POST':
-        movie_name = request.form.get('movie_name')
-        if movie_name:
-            recommendations = get_recommendations(movie_name)
-            if isinstance(recommendations, str):
-                error_message = recommendations
-                recommendations = []
-            else:
-                movie_details = get_movie_details(movie_name)
-                if movie_details:
-                    movie_id = movie_details['id']
-                    # Get reviews with sentiment analysis
-                    reviews = get_movie_reviews(movie_id)
+        movie_title = request.form['movie_title']
+        recommendations = get_recommendations(movie_title)
 
-
-    print("Recommendations:", recommendations)
-    print(type(recommendations))
-
-    return render_template('index.html',
-                           recommendations=recommendations,
-                           movie_details=movie_details,
-                           reviews=reviews,
-                           error_message=error_message)
-
-
-@app.route('/suggest_movies', methods=['GET'])
-def suggest_movies():
-    partial_title = request.args.get('query', '').strip()
-    if partial_title:
-        matching_movies = df[df['title'].str.contains(partial_title, case=False)]['title'].head(5).tolist()
-        return jsonify(matching_movies)
-    return jsonify([])
+    return render_template('index.html', recommendations=recommendations)
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True)
