@@ -247,8 +247,6 @@ pytoolconfig
 pytz
 pyviz_comms
 PyWavelets
-pywin32-ctypes
-pywinpty
 PyYAML
 pyzmq
 QDarkStyle
