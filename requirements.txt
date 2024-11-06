@@ -169,7 +169,6 @@ multidict
 multipledispatch
 mypy
 mypy-extensions
-navigator-updater
 nbclient
 nbconvert
 nbformat
