@@ -16,7 +16,7 @@ app = Flask(__name__)
 API_KEY = '3acc39754e9014eca3c0799f663b5785'
 BASE_URL = 'https://api.themoviedb.org/3'
 
-# Global variables
+data_loaded = False
 df = None
 cosine_sim = None
 nb_sentiment_model = None
@@ -24,57 +24,73 @@ svm_sentiment_model = None
 vectorizer = None
 vectorizer_svm = None
 
-
-@app.before_first_request
+@app.before_request
 def load_data():
-    global df, cosine_sim, nb_sentiment_model, svm_sentiment_model, vectorizer, vectorizer_svm
+    global df, cosine_sim, nb_sentiment_model, svm_sentiment_model, vectorizer, vectorizer_svm, data_loaded
 
-    # Optimize DataFrame loading
-    dtype_dict = {
-        'id': 'int32',
-        'title': 'str',
-        'concat': 'str',
-        # Add other columns with appropriate data types
-    }
+    if not data_loaded:
+        # Load the DataFrame
+        dtype_dict = {
+            'id': 'int32',
+            'title': 'str',
+            'concat': 'str',
+        }
 
-    # Load CSV with optimized settings
-    df = pd.read_csv('new_movies.csv',
-                     low_memory=False,
-                     encoding='utf-8',
-                     nrows=10000,
-                     dtype=dtype_dict,
-                     usecols=['id', 'title', 'concat'])  # Only load needed columns
+        df = pd.read_csv('new_movies.csv', low_memory=False, encoding='utf-8', nrows=10000, dtype=dtype_dict, usecols=['id', 'title', 'concat'])
 
-    # Optimize TF-IDF
-    tfidf = TfidfVectorizer(analyzer='word',
-                            stop_words='english',
-                            max_features=5000)  # Limit features
-    tfidf_matrix = tfidf.fit_transform(df['concat'])
+        # Check if the DataFrame is empty
+        if df.empty:
+            raise ValueError("The DataFrame is empty, cannot proceed with TF-IDF transformation.")
 
-    # Calculate similarity matrix in chunks to save memory
-    chunk_size = 1000
-    n_chunks = len(df) // chunk_size + 1
-    cosine_sim = np.zeros((len(df), len(df)), dtype='float32')  # Use float32 instead of float64
+        # Clean 'concat' column (remove NaN values)
+        df = df[df['concat'].notna()]
 
-    for i in range(n_chunks):
-        start = i * chunk_size
-        end = min((i + 1) * chunk_size, len(df))
-        chunk = tfidf_matrix[start:end]
-        cosine_sim[start:end] = cosine_similarity(chunk, tfidf_matrix)
+        # TF-IDF Vectorization
+        tfidf = TfidfVectorizer(analyzer='word', stop_words='english', max_features=5000)
+        tfidf_matrix = tfidf.fit_transform(df['concat'])
 
-    # Load models more efficiently
-    with open('nb_sentiment_model.pkl', 'rb') as f:
-        nb_sentiment_model = pickle.load(f)
-    with open('review_vectorizer.pkl', 'rb') as f:
-        vectorizer = pickle.load(f)
-    with open('svm_sentiment_model.pkl', 'rb') as f:
-        svm_sentiment_model = pickle.load(f)
-    with open('review_vectorizer_SVM.pkl', 'rb') as f:
-        vectorizer_svm = pickle.load(f)
+        # Ensure the tfidf_matrix is not empty
+        if tfidf_matrix.shape[0] == 0:
+            raise ValueError("TF-IDF matrix is empty, check the input data.")
 
-    # Clear unnecessary objects
-    gc.collect()
+        # Initialize cosine similarity matrix
+        chunk_size = 1000
+        n_chunks = len(df) // chunk_size + 1
+        cosine_sim = np.zeros((len(df), len(df)), dtype='float32')
 
+        # Loop through the data in chunks
+        for i in range(n_chunks):
+            start = i * chunk_size
+            end = min((i + 1) * chunk_size, len(df))
+            chunk = tfidf_matrix[start:end]
+
+            # Skip empty chunks
+            if chunk.shape[0] == 0:
+                print(f"Warning: Empty chunk at index {i}, skipping...")
+                continue
+
+            try:
+                # Compute cosine similarity for this chunk
+                cosine_sim[start:end] = cosine_similarity(chunk, tfidf_matrix)
+            except ValueError as e:
+                print(f"Error in computing cosine similarity for chunk {i}: {e}")
+                continue
+
+        # Load models
+        with open('nb_sentiment_model.pkl', 'rb') as f:
+            nb_sentiment_model = pickle.load(f)
+        with open('review_vectorizer.pkl', 'rb') as f:
+            vectorizer = pickle.load(f)
+        with open('svm_sentiment_model.pkl', 'rb') as f:
+            svm_sentiment_model = pickle.load(f)
+        with open('review_vectorizer_SVM.pkl', 'rb') as f:
+            vectorizer_svm = pickle.load(f)
+
+        # Clear unnecessary objects to free memory
+        gc.collect()
+
+        # Set the flag to True to indicate data has been loaded
+        data_loaded = True
 
 
 
