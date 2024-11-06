@@ -6,5 +6,5 @@ services:
     startCommand: gunicorn --config gunicorn_config.py app:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9
+        value: 3.12.7
     plan: free  # Specify the free plan explicitly
