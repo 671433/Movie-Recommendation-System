@@ -54,7 +54,7 @@ def load_data():
             raise ValueError("TF-IDF matrix is empty, check the input data.")
 
         # Initialize cosine similarity matrix
-        chunk_size = 1000
+        chunk_size = 500
         n_chunks = len(df) // chunk_size + 1
         cosine_sim = np.zeros((len(df), len(df)), dtype='float32')
 
