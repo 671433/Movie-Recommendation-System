@@ -14,9 +14,6 @@ aioitertools
 aiosignal
 alabaster
 altair
-anaconda-catalogs
-anaconda-client
-anaconda-cloud-auth
 annotated-types
 anyio
 appdirs==1.4.4
@@ -356,3 +353,4 @@ zict
 zipp
 zope.interface
 zstandard
+annotated-types
