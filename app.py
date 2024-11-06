@@ -1,6 +1,6 @@
 import gc
 import os
-
+import gdown
 from flask import Flask, request, render_template, jsonify
 import pandas as pd
 import numpy as np
@@ -29,6 +29,12 @@ def load_data():
     global df, cosine_sim, nb_sentiment_model, svm_sentiment_model, vectorizer, vectorizer_svm, data_loaded
 
     if not data_loaded:
+        # URL of the file in Google Drive
+        file_url = 'https://drive.google.com/uc?id=18gEjCisVUR5GuFCgyuCR_FFG2LBJDbvR&export=download'
+
+        # Use gdown to download the file
+        gdown.download(file_url, 'new_movies.csv', quiet=False)
+
         # Load the DataFrame
         dtype_dict = {
             'id': 'int32',
@@ -86,7 +92,7 @@ def load_data():
         with open('review_vectorizer_SVM.pkl', 'rb') as f:
             vectorizer_svm = pickle.load(f)
 
-        # Clear unnecessary objects to free memory
+        # Clear unpip install gdownnecessary objects to free memory
         gc.collect()
 
         # Set the flag to True to indicate data has been loaded
