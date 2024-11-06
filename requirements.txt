@@ -58,7 +58,7 @@ comm
 constantly
 contourpy
 cookiecutter
-cryptography
+cryptography==42.0.2 --only-binary :all:
 cssselect
 cycler
 cytoolz
