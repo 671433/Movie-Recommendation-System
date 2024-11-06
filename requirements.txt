@@ -17,7 +17,6 @@ altair
 anaconda-catalogs
 anaconda-client
 anaconda-cloud-auth
-anaconda-project
 annotated-types
 anyio
 appdirs==1.4.4
